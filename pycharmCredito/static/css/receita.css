@@ -1,0 +1,141 @@
+/* Estilo simples compartilhado pelas telas financeiras. */
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    font: 16px Arial, sans-serif;
+    color: #25232a;
+    background: #fcf9f9;
+}
+
+header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 18px;
+    padding: 20px 5%;
+    background: white;
+    border-bottom: 1px solid #dbe3ed;
+}
+
+.logo {
+    width: 100px;
+}
+
+nav,
+.acoes {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 16px;
+}
+
+a {
+    color: #603b98;
+}
+
+main {
+    max-width: 1050px;
+    margin: 32px auto;
+    padding: 0 20px;
+}
+
+section {
+    background: white;
+    padding: 24px;
+    margin: 20px 0;
+    border-radius: 12px;
+    border: 1px solid #dbe3ed;
+}
+
+.cadastro {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    max-width: 520px;
+}
+
+input,
+select,
+button {
+    padding: 12px;
+    font: inherit;
+    border: 1px solid #a8b8c7;
+    border-radius: 6px;
+}
+
+button {
+    background: #603b98;
+    color: white;
+    cursor: pointer;
+}
+
+button.excluir {
+    background: #a62c35;
+}
+
+.tabela {
+    overflow-x: auto;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+th,
+td {
+    padding: 14px;
+    text-align: left;
+    border-bottom: 1px solid #dbe3ed;
+}
+
+.mensagem {
+    padding: 14px;
+    border-radius: 6px;
+}
+
+.success {
+    background: #d9f2e4;
+    color: #165534;
+}
+
+.error {
+    background: #fbe0e1;
+    color: #8f202a;
+}
+
+@media (max-width: 600px) {
+    header {
+        align-items: flex-start;
+    }
+
+    nav {
+        width: 100%;
+    }
+
+    section {
+        padding: 16px;
+    }
+}
+
+/* Evita que textos longos e controles ultrapassem a largura do celular. */
+input,
+select,
+textarea {
+    max-width: 100%;
+    min-width: 0;
+}
+
+button,
+a,
+p,
+h1,
+h2,
+h3,
+strong {
+    overflow-wrap: break-word;
+}

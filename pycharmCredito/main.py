@@ -6,7 +6,7 @@ from flask_bcrypt import Bcrypt
 import fdb
 
 # CONFIGURAÇÃO DO FLASK
-app = Flask(__name__, template_folder="Templates", static_folder="Static", static_url_path="/static")
+app = Flask(__name__, template_folder="Templates")
 bcrypt = Bcrypt(app)
 app.config["SECRET_KEY"] = "Chavesdfglkjhgfdshjkjhgfdcvbmnb"
 # CONEXÃO COM O BANCO
@@ -64,6 +64,48 @@ def valor_positivo(texto):
 
 
 # VERIFICA A SENHA CRIPTOGRAFADA
+
+def atualizar_saldo_mensal(cursor, id_usuario, data_movimento):
+    ano = data_movimento.year
+    mes = data_movimento.month
+
+    cursor.execute("""
+        SELECT DATA_MOVIMENTO, VALOR FROM ARO_RECEITA
+        WHERE ID_USUARIO = ?
+    """, (id_usuario,))
+    total_receitas = 0
+    for receita in cursor.fetchall():
+        if receita[0].year == ano and receita[0].month == mes:
+            total_receitas = total_receitas + receita[1]
+
+    cursor.execute("""
+        SELECT DATA_MOVIMENTO, VALOR FROM ARO_DESPESA
+        WHERE ID_USUARIO = ?
+    """, (id_usuario,))
+    total_despesas = 0
+    for despesa in cursor.fetchall():
+        if despesa[0].year == ano and despesa[0].month == mes:
+            total_despesas = total_despesas + despesa[1]
+
+    saldo = total_receitas - total_despesas
+    cursor.execute("""
+        SELECT ID_SALDO FROM ARO_SALDO_MENSAL
+        WHERE ID_USUARIO = ? AND ANO = ? AND MES = ?
+    """, (id_usuario, ano, mes))
+    registro = cursor.fetchone()
+    if registro:
+        cursor.execute("""
+            UPDATE ARO_SALDO_MENSAL
+            SET TOTAL_RECEITAS = ?, TOTAL_DESPESAS = ?, SALDO = ?
+            WHERE ID_USUARIO = ? AND ANO = ? AND MES = ?
+        """, (total_receitas, total_despesas, saldo, id_usuario, ano, mes))
+    else:
+        cursor.execute("""
+            INSERT INTO ARO_SALDO_MENSAL
+            (ID_USUARIO, ANO, MES, TOTAL_RECEITAS, TOTAL_DESPESAS, SALDO)
+            VALUES (?, ?, ?, ?, ?, ?)
+        """, (id_usuario, ano, mes, total_receitas, total_despesas, saldo))
+
 
 def verificar_senha(senha_hash, senha):
     return bcrypt.check_password_hash(senha_hash, senha)
@@ -539,6 +581,11 @@ def receitas(id_registro=None):
 
                 mensagem = "Receita atualizada com sucesso!"
 
+            # Atualiza o saldo do mês após salvar a receita.
+            atualizar_saldo_mensal(cursor, id_usuario, data_movimento)
+            if registro and registro[3] != data_movimento:
+                atualizar_saldo_mensal(cursor, id_usuario, registro[3])
+
             # Salva a receita no banco.
             con.commit()
 
@@ -613,6 +660,7 @@ def excluir_receita(id_registro):
                 WHERE ID_REGISTRO = ? AND ID_USUARIO = ?
             """, (id_registro, id_usuario))
 
+            atualizar_saldo_mensal(cursor, id_usuario, registro[0])
             con.commit()
 
             flash("Receita excluída com sucesso!", "success")
@@ -629,11 +677,358 @@ def excluir_receita(id_registro):
     return redirect(url_for("receitas"))
 
 
+# CADASTRAR, EDITAR E LISTAR DESPESAS
+@app.route("/despesas", methods=["GET", "POST"])
+@app.route("/despesas/<int:id_registro>/editar", methods=["GET", "POST"])
+def despesas(id_registro=None):
+    if not usuario_autenticado():
+        flash("Faça login para continuar.", "error")
+        return redirect(url_for("login"))
+
+    id_usuario = session["id_usuario"]
+    cursor = con.cursor()
+    registro = None
+    try:
+        if id_registro is not None:
+            cursor.execute("""
+                SELECT ID_REGISTRO, DESCRICAO, VALOR, DATA_MOVIMENTO, CLASSIFICACAO
+                FROM ARO_DESPESA WHERE ID_REGISTRO = ? AND ID_USUARIO = ?
+            """, (id_registro, id_usuario))
+            registro = cursor.fetchone()
+            if registro is None:
+                flash("Despesa não encontrada.", "error")
+                return redirect(url_for("despesas"))
+
+        if request.method == "POST":
+            descricao = request.form["descricao"].strip()
+            valor = valor_positivo(request.form["valor"])
+            classificacao = request.form["classificacao"]
+            data_movimento = request.form["data"]
+
+            if not descricao or len(descricao) > 100 or valor is None:
+                flash("Informe uma descrição e um valor positivo válido.", "error")
+                return redirect(url_for("despesas"))
+            if classificacao != "Fixa" and classificacao != "Variavel":
+                flash("Escolha a classificação Fixa ou Variável.", "error")
+                return redirect(url_for("despesas"))
+
+            if registro is None:
+                cursor.execute("""
+                    INSERT INTO ARO_DESPESA
+                    (ID_USUARIO, DESCRICAO, VALOR, DATA_MOVIMENTO, CLASSIFICACAO)
+                    VALUES (?, ?, ?, ?, ?)
+                """, (id_usuario, descricao, valor, data_movimento, classificacao))
+                mensagem = "Despesa cadastrada com sucesso!"
+            else:
+                cursor.execute("""
+                    UPDATE ARO_DESPESA
+                    SET DESCRICAO = ?, VALOR = ?, DATA_MOVIMENTO = ?, CLASSIFICACAO = ?
+                    WHERE ID_REGISTRO = ? AND ID_USUARIO = ?
+                """, (descricao, valor, data_movimento, classificacao, id_registro, id_usuario))
+                mensagem = "Despesa atualizada com sucesso!"
+
+            # Busca a data que foi salva no banco
+            cursor.execute("""
+                SELECT DATA_MOVIMENTO
+                FROM ARO_DESPESA
+                WHERE ID_USUARIO = ? AND DATA_MOVIMENTO = ?
+            """, (id_usuario, data_movimento))
+
+            data_movimento = cursor.fetchone()[0]
+
+            # Atualiza o saldo mensal
+            atualizar_saldo_mensal(cursor, id_usuario, data_movimento)
+            if registro and registro[3] != data_movimento:
+                atualizar_saldo_mensal(cursor, id_usuario, registro[3])
+            con.commit()
+            flash(mensagem, "success")
+            return redirect(url_for("despesas"))
+
+        cursor.execute("""
+            SELECT ID_REGISTRO, DESCRICAO, VALOR, DATA_MOVIMENTO, CLASSIFICACAO
+            FROM ARO_DESPESA WHERE ID_USUARIO = ?
+            ORDER BY DATA_MOVIMENTO DESC, ID_REGISTRO DESC
+        """, (id_usuario,))
+        registros = cursor.fetchall()
+        return render_template("despesas.html", registros=registros, registro=registro,
+                               hoje=date.today().isoformat())
+
+    except ValueError:
+        con.rollback()
+        flash("Informe uma data válida.", "error")
+        return redirect(url_for("despesas"))
+    except Exception as e:
+        con.rollback()
+        app.logger.exception("Erro nas despesas: %s", e)
+        flash("Erro ao consultar ou salvar despesas. Veja o terminal.", "error")
+        return redirect(url_for("novo"))
+    finally:
+        con.rollback()
+        cursor.close()
+
+
+@app.route("/despesas/<int:id_registro>/excluir", methods=["POST"])
+def excluir_despesa(id_registro):
+    if not usuario_autenticado():
+        return redirect(url_for("login"))
+    id_usuario = session["id_usuario"]
+    cursor = con.cursor()
+    try:
+        cursor.execute("""
+            SELECT DATA_MOVIMENTO FROM ARO_DESPESA
+            WHERE ID_REGISTRO = ? AND ID_USUARIO = ?
+        """, (id_registro, id_usuario))
+        registro = cursor.fetchone()
+        if registro is None:
+            flash("Despesa não encontrada.", "error")
+        else:
+            cursor.execute("""
+                DELETE FROM ARO_DESPESA
+                WHERE ID_REGISTRO = ? AND ID_USUARIO = ?
+            """, (id_registro, id_usuario))
+            atualizar_saldo_mensal(cursor, id_usuario, registro[0])
+            con.commit()
+            flash("Despesa excluída com sucesso!", "success")
+    except Exception as e:
+        con.rollback()
+        app.logger.exception("Erro ao excluir despesa: %s", e)
+        flash("Não foi possível excluir a despesa.", "error")
+    finally:
+        con.rollback()
+        cursor.close()
+    return redirect(url_for("despesas"))
+
+
+# CONSULTAR SALDO MENSAL
+@app.route("/saldos_mensais")
+def saldos_mensais():
+    if not usuario_autenticado():
+        return redirect(url_for("login"))
+    cursor = con.cursor()
+    try:
+        cursor.execute("""
+            SELECT ANO, MES, TOTAL_RECEITAS, TOTAL_DESPESAS, SALDO
+            FROM ARO_SALDO_MENSAL WHERE ID_USUARIO = ?
+            ORDER BY ANO DESC, MES DESC
+        """, (session["id_usuario"],))
+        saldos = cursor.fetchall()
+        return render_template("saldos_mensais.html", saldos=saldos)
+    except Exception as e:
+        app.logger.exception("Erro ao listar saldo mensal: %s", e)
+        flash("Erro ao listar saldo mensal. Veja o terminal.", "error")
+        return redirect(url_for("novo"))
+    finally:
+        con.rollback()
+        cursor.close()
+
+
 @app.route('/admin')
 def admin():
    return render_template('index.html')
 
 
+# Taxas por data: esta tabela e separada de TAXA_EXERCICIO, que utiliza anos.
+
+@app.route("/taxas")
+def pagina_taxas():
+    if not usuario_autenticado():
+        return redirect(url_for("login"))
+
+    cursor = con.cursor()
+
+    try:
+
+        id_edicao = request.args.get("editar", type=int)
+
+        editar = None
+
+        if id_edicao:
+
+            cursor.execute("""
+
+                SELECT ID_TAXA, PERCENTUAL, DATA_REFERENCIA
+
+                FROM TAXA_JUROS WHERE ID_TAXA = ? AND ID_USUARIO = ?
+
+            """, (id_edicao, session["id_usuario"]))
+
+            editar = cursor.fetchone()
+
+            if not editar:
+                flash("Taxa não encontrada ou sem permissão.", "error")
+
+                return redirect(url_for("pagina_taxas"))
+
+        cursor.execute("""
+
+            SELECT ID_TAXA, PERCENTUAL, DATA_REFERENCIA, ID_USUARIO
+
+            FROM TAXA_JUROS ORDER BY DATA_REFERENCIA DESC
+
+        """)
+
+        taxas = cursor.fetchall()
+
+        return render_template("taxas.html", taxas=taxas, editar=editar)
+
+    except Exception:
+
+        flash("Não foi possível consultar as taxas.", "error")
+
+        return redirect(url_for("novo"))
+
+    finally:
+
+        con.rollback()
+
+        cursor.close()
+
+
+# A data da taxa e preenchida automaticamente pelo Firebird (CURRENT_DATE).
+
+@app.route("/taxas/cadastrar", methods=["POST"])
+def cadastrar_taxa():
+    if not usuario_autenticado():
+        return redirect(url_for("login"))
+
+    try:
+
+        percentual = float(request.form.get("percentual", ""))
+
+        if not (0 <= percentual < 100000):
+            raise ValueError("Taxa inválida")
+
+    except ValueError:
+
+        flash("Informe um percentual válido, sem valores negativos.", "error")
+
+        return redirect(url_for("pagina_taxas"))
+
+    cursor = con.cursor()
+
+    try:
+
+        cursor.execute("""
+
+            SELECT ID_TAXA FROM TAXA_JUROS
+
+            WHERE DATA_REFERENCIA = CURRENT_DATE
+
+        """)
+
+        if cursor.fetchone():
+            flash("Já existe uma taxa cadastrada para a data de hoje.", "error")
+
+            return redirect(url_for("pagina_taxas"))
+
+        cursor.execute("""
+
+            INSERT INTO TAXA_JUROS (ID_USUARIO, PERCENTUAL, DATA_REFERENCIA)
+
+            VALUES (?, ?, CURRENT_DATE)
+
+        """, (session["id_usuario"], percentual))
+
+        con.commit()
+
+        flash("Taxa cadastrada com sucesso!", "success")
+
+    except Exception:
+
+        con.rollback()
+
+        flash("Não foi possível cadastrar. Verifique se já existe taxa hoje.", "error")
+
+    finally:
+
+        cursor.close()
+
+    return redirect(url_for("pagina_taxas"))
+
+
+# Edita somente o percentual; a data original nao pode ser alterada manualmente.
+
+@app.route("/taxas/editar/<int:id_taxa>", methods=["POST"])
+def editar_taxa(id_taxa):
+    if not usuario_autenticado():
+        return redirect(url_for("login"))
+
+    try:
+
+        percentual = float(request.form.get("percentual", ""))
+
+        if not (0 <= percentual < 100000):
+            raise ValueError("Taxa inválida")
+
+    except ValueError:
+
+        flash("Informe um percentual válido.", "error")
+
+        return redirect(url_for("pagina_taxas"))
+
+    cursor = con.cursor()
+
+    try:
+
+        cursor.execute("""
+
+            UPDATE TAXA_JUROS SET PERCENTUAL = ?
+
+            WHERE ID_TAXA = ? AND ID_USUARIO = ?
+
+        """, (percentual, id_taxa, session["id_usuario"]))
+
+        if cursor.rowcount == 0:
+            flash("Taxa não encontrada ou sem permissão.", "error")
+
+            return redirect(url_for("pagina_taxas"))
+
+        con.commit()
+
+        flash("Taxa atualizada com sucesso!", "success")
+
+    except Exception:
+
+        con.rollback()
+
+        flash("Erro ao atualizar taxa.", "error")
+
+    finally:
+
+        cursor.close()
+
+    return redirect(url_for("pagina_taxas"))
+
+
+@app.route("/taxas/excluir/<int:id_taxa>", methods=["POST"])
+def excluir_taxa(id_taxa):
+    if not usuario_autenticado():
+        return redirect(url_for("login"))
+
+    cursor = con.cursor()
+
+    try:
+        cursor.execute("""DELETE FROM TAXA_JUROS
+            WHERE ID_TAXA = ? AND ID_USUARIO = ?
+        """, (id_taxa, session["id_usuario"]))
+
+        if cursor.rowcount == 0:
+            flash("Taxa não encontrada ou sem permissão.", "error")
+            return redirect(url_for("pagina_taxas"))
+
+        con.commit()
+        flash("Taxa excluída com sucesso!", "success")
+
+    except Exception:
+        con.rollback()
+        flash("Erro ao excluir taxa.", "error")
+
+    finally:
+
+        cursor.close()
+
+    return redirect(url_for("pagina_taxas"))
+
+
 if __name__ == "__main__":
-    # A conexão é compartilhada: processa uma requisição por vez.
-    app.run(debug=True, threaded=False)
+    app.run(debug=True)

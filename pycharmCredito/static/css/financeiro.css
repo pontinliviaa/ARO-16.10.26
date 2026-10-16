@@ -1,0 +1,549 @@
+/* Aparência das páginas financeiras do ARO */
+
+* {
+
+    box-sizing: border-box;
+
+}
+
+body {
+
+    margin: 0;
+
+    font-family: Arial, sans-serif;
+
+    background: #faf8fa;
+
+    color: #25232a;
+
+}
+
+.pagina {
+
+    min-height: 100vh;
+
+    display: flex;
+
+    flex-direction: column;
+
+}
+
+.cabecalho {
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: space-between;
+
+    gap: 16px;
+
+    background: white;
+
+    border-bottom: 2px solid #d8d4d8;
+
+    padding: 10px 3%;
+
+}
+
+.marca img {
+
+    width: 94px;
+
+    height: auto;
+
+    display: block;
+
+}
+
+.menu {
+
+    display: flex;
+
+    gap: 24px;
+
+    align-items: center;
+
+    flex-wrap: wrap;
+
+}
+
+.menu a {
+
+    color: #5b3a8e;
+
+    font-weight: bold;
+
+    font-size: 14px;
+
+    text-decoration: none;
+
+}
+
+.menu a:hover,
+
+.menu a.ativo {
+
+    text-decoration: underline;
+
+}
+
+.cabecalho-acoes {
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 12px;
+
+}
+
+.perfil {
+
+    color: #5b3a8e;
+
+    text-decoration: none;
+
+}
+
+.sair {
+
+    background: transparent;
+
+    color: #25232a;
+
+    padding: 5px 8px;
+
+}
+
+.conteudo {
+
+    width: 100%;
+
+    max-width: 1060px;
+
+    margin: 35px auto 55px;
+
+    padding: 0 20px;
+
+    flex: 1;
+
+}
+
+h1 {
+
+    color: #5b3a8e;
+
+    font-size: 26px;
+
+    margin: 0 0 6px;
+
+}
+
+.subtitulo {
+
+    color: #77727f;
+
+    font-size: 13px;
+
+    margin: 0 0 26px;
+
+}
+
+.cartao {
+
+    background: white;
+
+    border: 1px solid #e5e0e8;
+
+    border-radius: 9px;
+
+    padding: 23px;
+
+    margin: 0 0 23px;
+
+    box-shadow: 0 3px 10px #00000007;
+
+}
+
+h2 {
+
+    font-size: 17px;
+
+    color: #5b3a8e;
+
+    margin: 0 0 17px;
+
+}
+
+.form-card {
+
+    min-height: 300px;
+
+}
+
+label {
+
+    display: block;
+
+    font-size: 13px;
+
+    font-weight: 600;
+
+    margin: 13px 0 6px;
+
+}
+
+input,
+
+select {
+
+    display: block;
+
+    background: #f6f3f6;
+
+    border: 1px solid #e7e3e9;
+
+    border-radius: 5px;
+
+    padding: 10px;
+
+    width: 100%;
+
+    max-width: 430px;
+
+    font: inherit;
+
+    font-size: 13px;
+
+    color: #25232a;
+
+}
+
+input:focus,
+
+select:focus {
+
+    outline: 2px solid #8b6bb1;
+
+}
+
+.acoes {
+
+    display: flex;
+
+    flex-wrap: wrap;
+
+    align-items: center;
+
+    gap: 14px;
+
+    margin-top: 18px;
+
+}
+
+button,
+
+.atalhos a {
+
+    background: #5b3a8e;
+
+    color: white;
+
+    border: 0;
+
+    padding: 10px 16px;
+
+    border-radius: 5px;
+
+    font-size: 13px;
+
+    font-weight: bold;
+
+    cursor: pointer;
+
+    text-decoration: none;
+
+}
+
+button:hover,
+
+.atalhos a:hover {
+
+    background: #4a2e75;
+
+}
+
+.cancelar,
+
+.link-editar {
+
+    color: #5b3a8e;
+
+    text-decoration: none;
+
+    font-size: 13px;
+
+    font-weight: bold;
+
+}
+
+.perigo {
+
+    background: transparent;
+
+    color: #bd3838;
+
+    padding: 0;
+
+}
+
+.perigo:hover {
+
+    color: #9b2020;
+
+    background: transparent;
+
+    text-decoration: underline;
+
+}
+
+.tabela-rolagem {
+
+    overflow-x: auto;
+
+}
+
+table {
+
+    border-collapse: collapse;
+
+    width: 100%;
+
+    min-width: 490px;
+
+}
+
+th {
+
+    background: #f6f3f6;
+
+    color: #5b3a8e;
+
+    font-weight: bold;
+
+    font-size: 12px;
+
+}
+
+th,
+
+td {
+
+    text-align: left;
+
+    padding: 12px 10px;
+
+    border-bottom: 1px solid #ece8ed;
+
+}
+
+td {
+
+    font-size: 13px;
+
+}
+
+.acoes-tabela {
+
+    display: flex;
+
+    gap: 14px;
+
+    align-items: center;
+
+    white-space: nowrap;
+
+}
+
+.acoes-tabela form {
+
+    margin: 0;
+
+}
+
+.taxas-layout {
+
+    display: grid;
+
+    grid-template-columns: 320px minmax(0, 1fr);
+
+    gap: 20px;
+
+}
+
+.taxas-layout .cartao {
+
+    margin-bottom: 0;
+
+}
+
+.taxas-layout .acoes button {
+
+    width: 100%;
+
+}
+
+.observacao {
+
+    font-size: 13px;
+
+    color: #77727f;
+
+    line-height: 1.5;
+
+}
+
+.mensagem {
+
+    padding: 12px;
+
+    margin: 0 0 18px;
+
+    border-radius: 6px;
+
+    font-size: 13px;
+
+}
+
+.error {
+
+    color: #9c2525;
+
+    background: #fff0f0;
+
+}
+
+.success {
+
+    color: #176634;
+
+    background: #eefaf0;
+
+}
+
+.positivo {
+
+    color: #228448;
+
+    font-weight: bold;
+
+}
+
+.negativo {
+
+    color: #b63636;
+
+    font-weight: bold;
+
+}
+
+.atalhos {
+
+    display: flex;
+
+    flex-wrap: wrap;
+
+    gap: 12px;
+
+    margin-top: 24px;
+
+}
+
+.rodape {
+
+    text-align: center;
+
+    background: #eee1ff;
+
+    padding: 23px 15px 12px;
+
+}
+
+.rodape nav {
+
+    display: flex;
+
+    flex-wrap: wrap;
+
+    justify-content: center;
+
+    gap: 30px;
+
+}
+
+.rodape nav a {
+
+    text-decoration: none;
+
+    color: #5b3a8e;
+
+    font-weight: bold;
+
+    font-size: 14px;
+
+}
+
+.rodape p {
+
+    font-size: 12px;
+
+    margin: 19px 0 0;
+
+}
+
+.rodape .direitos {
+
+    font-weight: bold;
+
+    color: #16121b;
+
+}
+
+@media (max-width: 720px) {
+
+    .cabecalho {
+
+        justify-content: center;
+
+        flex-wrap: wrap;
+
+    }
+
+    .menu {
+
+        justify-content: center;
+
+        gap: 12px;
+
+    }
+
+    .conteudo {
+
+        margin-top: 24px;
+
+    }
+
+    .taxas-layout {
+
+        grid-template-columns: 1fr;
+
+    }
+
+    .cartao {
+
+        padding: 16px;
+
+    }
+
+}

@@ -16,8 +16,7 @@
             <a href="{{ url_for('novo') }}">Início</a>
             <a href="{{ url_for('receitas') }}">Receitas</a>
             <a href="{{ url_for('despesas') }}">Despesas</a>
-            <a href="{{ url_for('taxas') }}">Taxas</a>
-            <a href="{{ url_for('saldo_atual') }}">Saldo mensal</a>
+            <a href="{{ url_for('saldos_mensais') }}">Saldo mensal</a>
             <a href="{{ url_for('perfil') }}">Perfil</a>
         </nav>
         <form action="{{ url_for('logout') }}" method="POST"><button>Sair</button></form>
